@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import toast from "react-hot-toast";
 
 export default function Home() {
   const account = useActiveAccount();
@@ -29,6 +30,15 @@ export default function Home() {
     signer: null,
     contract: null,
   });
+  const [isSidebarVisible, setSidebarVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState(null);
+  const [data, setData] = useState([]);
+  const [displaydata, setDisplayData] = useState([]);
+  const [othersAddress, setOthersAddress] = useState("");
+  const [othersAddress1, setOthersAddress1] = useState("");
+  const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false)
 
   const connectWallet = async () => {
     try {
@@ -39,9 +49,6 @@ export default function Home() {
         const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
         setState({ provider, signer, contract });
-        setTimeout(() => {
-          getdata();
-        }, 2000)
       } else {
         console.error("Ethereum object not found. Install a web3 wallet like MetaMask.");
       }
@@ -50,15 +57,6 @@ export default function Home() {
     }
   };
 
-  const [isSidebarVisible, setSidebarVisible] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [file, setFile] = useState(null);
-  const [data, setData] = useState([]);
-  const [displaydata, setDisplayData] = useState([]);
-  const [othersAddress, setOthersAddress] = useState("");
-  const [othersAddress1, setOthersAddress1] = useState("");
-  const [open, setOpen] = useState(false);
-  const [adding, setAdding] = useState(false)
 
   const toggleOpen = useCallback(() => {
     setOpen((prev) => !prev);
@@ -76,10 +74,10 @@ export default function Home() {
     try {
       setAdding(true)
       await state.contract.allow(othersAddress1);
-      alert(`Access Granted to ${othersAddress1}`)
+      toast.success(`Access Granted to ${othersAddress1}`)
     }
     catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     }
     finally {
       setAdding(false)
@@ -94,6 +92,7 @@ export default function Home() {
 
   useEffect(() => {
     state.contract && accessList();
+    state.contract && getdata();
   }, [state.contract]);
 
 
@@ -117,11 +116,11 @@ export default function Home() {
         const ImgHash = `https://gateway.pinata.cloud/ipfs/${resFile.data.IpfsHash}`;
         const transaction = await state?.contract.add(account.address, ImgHash);
         await transaction.wait();
-        alert("Image Uploaded Successfully");
+        toast.success("Image Uploaded Successfully");
         setFile(null);
         getdata()
       } catch (e) {
-        alert("Unable to upload image to Pinata");
+        toast.error("Unable to upload image to Pinata");
         setFile(null);
       }
       finally {
@@ -130,7 +129,7 @@ export default function Home() {
       }
     }
     else {
-      alert("Select File First");
+      toast.error("Select File First");
     }
   };
 
@@ -138,11 +137,11 @@ export default function Home() {
     try {
       setAdding(true);
       await state.contract.disallow(address);
-      alert("User Removed Successfully!")
+      toast.success("User Removed Successfully!")
       accessList()
     }
     catch (err) {
-      alert(`Error happenning while Revoking Access From the User ${err.message}`)
+      toast.error(`Error happenning while Revoking Access From the User ${err.message}`)
     }
     finally {
       setAdding(false)
@@ -160,7 +159,7 @@ export default function Home() {
           dataArray = await state.contract.display(account.address);
         }
       } catch (e) {
-        alert(`You Don't Have Access to view Data of ${othersAddress || account.address}`);
+        toast.error(`You Don't Have Access to view Data of ${othersAddress || account.address}`);
         return;
       }
       const isEmpty = Object?.keys(dataArray).length === 0;
@@ -170,7 +169,7 @@ export default function Home() {
         console.log(str_array)
         setDisplayData(str_array);
       } else {
-        alert("No image to display");
+        toast.error("No image to display");
         return;
       }
     }
@@ -194,9 +193,9 @@ export default function Home() {
           <div className="flex h-full max-h-screen flex-col gap-2">
             <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
               <Link href="/" className="flex items-center gap-2 font-semibold">
-                <BadgeCent className="h-6 w-6" />
-                <span className="text-cyan-400">
-                  BDrive
+                {/* <BadgeCent className="h-6 w-6" /> */}
+                <span className="text-xl text-green-500">
+                  B<span className="text-blue-600">Drive</span>
                 </span>
               </Link>
               <Button
@@ -211,7 +210,7 @@ export default function Home() {
             <div className="flex-1">
               <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
                 {data?.length === 0 ? (
-                  <span className="m-auto text-cyan-400">No User Found</span>
+                  <span className="m-auto text-blue-600">No User Found</span>
                 ) : (
                   data?.map((user, index) => (
                     <div
@@ -264,8 +263,8 @@ export default function Home() {
               <nav className="grid gap-2 text-lg font-medium">
                 <Link href="/" className="flex items-center gap-2 font-semibold">
                   <BadgeCent className="h-6 w-6" />
-                  <span className="text-cyan-400">
-                    BDrive
+                  <span className="text-xl text-green-500">
+                    B<span className="text-blue-600">Drive</span>
                   </span>
                 </Link>
 
@@ -313,37 +312,59 @@ export default function Home() {
             account?.address && <Button className="font-bold" onClick={toggleOpen}>Permit User</Button>
           }
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild className="absolute right-4">
-              <ConnectButton client={client} />
-            </DropdownMenuTrigger>
-          </DropdownMenu>
-        </header>
+          <div className="flex justify-between items-center">
+            {(!isSidebarVisible && !account?.address) && (
+              <span className="text-2xl font-extrabold text-green-500">
+                B<span className="text-blue-600">Drive</span>
+              </span>
+            )}
+            <span className={`${!account?.address ? "absolute right-4" : ""}`}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild >
+                  <ConnectButton client={client} />
+                </DropdownMenuTrigger>
+              </DropdownMenu>
+            </span>
+          </div>
 
+        </header>
         <div className="w-1/3 mx-auto mt-2">
           <Input type="email" placeholder="Enter Address" onChange={(e) => setOthersAddress(e.target.value)} value={othersAddress} />
         </div>
 
-        {displaydata.length === 0 ? (
-          <div className="flex flex-col gap-2 items-center justify-center my-auto text-center">
-            <div className="text-4xl font-bold tracking-tight items-center text-orange-600">
-              Welcome to BDrive!
+        {(!account?.address || displaydata.length === 0) ? (
+          <div
+            style={{
+              backgroundImage: "url('/public/add-folder.gif')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+            className=" flex flex-col gap-2 items-center justify-center my-auto text-center h-screen w-full">
+            <div className="text-4xl font-bold tracking-tight text-orange-600">
+              Welcome to <span className="text-green-400">B<span className="text-blue-600">Drive!</span></span>
             </div>
-            <div className="text-xl font-bold tracking-tight items-center">
-              Securely store, manage, and share your files on the blockchain. Your files are safe, private, and easily accessible anytime, anywhere.
+            <div className="text-2xl font-bold tracking-tight text-green-400">
+              Securely store, manage, and share your files on the blockchain.
+            </div>
+            <div className="text-2xl font-bold tracking-tight text-blue-600">
+              Your files are safe, private, and easily accessible anytime, anywhere.
             </div>
           </div>
+
         ) :
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+          <div className="mx-auto mt-2" style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
             {displaydata.map((url, i) => (
-              <Image
-                key={i}
-                src={url}
-                alt={`Image ${i + 1}`}
-                width={100}
-                height={100}
-                layout="responsive"
-              />
+              <Link href={url} target="_blank">
+                <Image
+                  key={i}
+                  src={url}
+                  alt={`Image ${i + 1}`}
+                  width={300}
+                  height={300}
+                  layout="fixed"
+                />
+              </Link>
             ))}
           </div>
         }
