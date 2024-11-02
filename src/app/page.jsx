@@ -75,6 +75,7 @@ export default function Home() {
       setAdding(true)
       await state.contract.allow(othersAddress1);
       toast.success(`Access Granted to ${othersAddress1}`)
+      accessList()
     }
     catch (err) {
       toast.error(err.message)
@@ -355,9 +356,8 @@ export default function Home() {
         ) :
           <div className="mx-auto mt-2" style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
             {displaydata.map((url, i) => (
-              <Link href={url} target="_blank">
+              <Link href={url} target="_blank" key={i}>
                 <Image
-                  key={i}
                   src={url}
                   alt={`Image ${i + 1}`}
                   width={300}
